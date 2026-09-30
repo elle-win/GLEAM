@@ -213,7 +213,10 @@ utils::globalVariables(c(
   "value", "value_allocated", "value_total",
   "value_total_allocated_gas", "value_total_gas",
   "variable_name", "variable_type",
-  "unit"
+  "unit",
+  "value_total_allocated_co2eq",
+  "e_milk_kgco2e", "ef_farm", "flw_loss_fraction",
+  "q_lost", "q_milk", "e_loss_kgco2e"
 ))
 
 # --- run_soil_carbon_module -------------------------------------------------

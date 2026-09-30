@@ -285,6 +285,12 @@
 #' @param show_indicator Logical. Whether to display progress indicators during calculations.
 #'   Defaults to \code{TRUE}.
 #'
+#' @param flw_loss Optional \code{data.table} for milk food-loss after aggregation.
+#'   One row per \code{herd_id} with \code{flw_loss_fraction} (0--1). If \code{NULL}
+#'   (default), FLW is not run and \code{results_flw} is \code{NULL}.
+#'   EF is taken from this gleam run (allocated Milk CO2eq / milk mass), not from
+#'   a dashboard default.
+#'
 #' @return A named list with four elements:
 #' \describe{
 #'   \item{cohort_level_results}{A cohort-level \code{data.table} containing the
@@ -431,6 +437,9 @@
 #'     \code{results_production}, and \code{results_nitrogen}. These tables
 #'     summarise herd-level emissions, feed intake, production, and nitrogen
 #'     balance, all scaled to the assessment duration.}
+#'   \item{results_flw}{If \code{flw_loss} was supplied, a herd-level
+#'     \code{data.table} of milk mass lost and embodied kg CO2eq. Otherwise
+#'     \code{NULL}.}
 #' }
 #'
 #' @details
@@ -473,6 +482,8 @@
 #'   \item Compute allocation (\code{\link{run_allocation_module}}).
 #'   \item Aggregate to herd-level results and CO2-eq
 #'     (\code{\link{run_aggregation_module}}).
+#'   \item Optionally compute milk food-loss emissions
+#'     (\code{\link{run_flw_module}}) when \code{flw_loss} is supplied.
 #' }}
 #'
 #' All inputs containing \code{herd_id} must refer to the same herd set.
@@ -489,7 +500,8 @@
 #' \code{\link{run_emissions_ration_module}},
 #' \code{\link{run_production_module}},
 #' \code{\link{run_allocation_module}},
-#' \code{\link{run_aggregation_module}}
+#' \code{\link{run_aggregation_module}},
+#' \code{\link{run_flw_module}}
 #'
 #' @examples
 #' # Example 1: You do NOT have herd structure — use cohort input for herd simulation.
@@ -594,7 +606,8 @@ run_gleam <- function(
     manure_management_system_factors,
     simulation_duration = 365,
     global_warming_potential_set = "AR6",
-    show_indicator = TRUE
+    show_indicator = TRUE,
+    flw_loss = NULL
 ) {
 
   # --- Step 1: Validate inputs ------------------------------------------------
@@ -720,6 +733,17 @@ run_gleam <- function(
     show_indicator = show_indicator
   )
 
+  # --- Step 13: Optional milk food-loss (after aggregation; EF from this run) --
+  results_flw <- NULL
+  if (!is.null(flw_loss)) {
+    results_flw <- run_flw_module(
+      results_production = aggregation_results$results_production,
+      results_emissions = aggregation_results$results_emissions,
+      flw_loss = flw_loss,
+      show_indicator = show_indicator
+    )
+  }
+
   # Clear progress indicator if it was shown
   if (show_indicator) {
     cli::cli_status_clear()
@@ -737,7 +761,8 @@ run_gleam <- function(
         results_feed = aggregation_results$results_feed,
         results_production = aggregation_results$results_production,
         results_nitrogen = aggregation_results$results_nitrogen
-      )
+      ),
+      results_flw = results_flw
     )
   )
 }
